@@ -6,6 +6,7 @@ import java.util.Objects;
 
 import org.reallylastone.common.permission.utils.JwtAuthoritiesResolver;
 import org.reallylastone.common.permission.utils.KeycloakJwtAuthoritiesResolver;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,13 +34,15 @@ public class SecurityConfig {
     @Bean
     @ConditionalOnMissingBean(SecurityFilterChain.class)
     public SecurityFilterChain filterChain(HttpSecurity http,
-            JwtAuthoritiesResolver jwtAuthoritiesResolver) {
+            JwtAuthoritiesResolver jwtAuthoritiesResolver,
+            ObjectProvider<HttpSecurityCustomizer> customizers) {
         http.csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize.requestMatchers("/actuator/health/**")
                         .permitAll().anyRequest().authenticated())
                 .oauth2ResourceServer(
                         resourceServer -> resourceServer.jwt(jwt -> jwt.jwtAuthenticationConverter(
                                 jwtAuthenticationConverter(jwtAuthoritiesResolver))));
+        customizers.orderedStream().forEach(customizer -> customizer.customize(http));
         return http.build();
     }
 
